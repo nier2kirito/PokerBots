@@ -156,6 +156,11 @@ class PokerEvaluator:
 
 
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Hello from production, Nier"
+
 app.secret_key = os.urandom(24)
 
 evaluator = PokerEvaluator()
