@@ -626,4 +626,4 @@ if __name__ == '__main__':
         os.makedirs(static_card_dir, exist_ok=True)
         print(f"Created {static_card_dir} directory. Please add card images there.")
     #app.run(debug=True) 
-    #app.run(host="0.0.0.0", port = 8080)
+    app.run(host="0.0.0.0", port = 8080)
