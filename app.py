@@ -156,7 +156,7 @@ class PokerEvaluator:
 
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24))
+app.secret_key = os.urandom(24)
 
 evaluator = PokerEvaluator()
 RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2']
