@@ -26,4 +26,5 @@ ENV FLASK_APP app.py
 
 # Run app.py when the container launches using Gunicorn
 # app:app means "look in app.py for an instance named app"
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+# Change the CMD to use Flask's built-in server instead of Gunicorn
+CMD ["python", "app.py"]
