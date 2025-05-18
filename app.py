@@ -159,7 +159,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Hello from production, Nier"
+    return render_template("index.html")
 
 app.secret_key = os.urandom(24)
 
