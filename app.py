@@ -171,11 +171,81 @@ SUITS = ['h', 'd', 'c', 's'] # hearts, diamonds, clubs, spades
 def load_results():
     try:
         with open('aggregated_results.pkl', 'rb') as f:
-            return pickle.load(f)
+            data = pickle.load(f)
+            # print(f"[DEBUG_LOAD_RESULTS] Successfully loaded aggregated_results.pkl.")
+            # print(f"[DEBUG_LOAD_RESULTS] Number of entries in HAND_DATA_STRATEGY: {len(data)}")
+            # Print a sample entry if data is not empty
+            # if data:
+            #     sample_key = next(iter(data))
+            #     sample_value = data[sample_key]
+            #     #print(f"[DEBUG_LOAD_RESULTS] Sample entry - Key: {sample_key}, Value: {sample_value}")
+            # else:
+            #     #print("[DEBUG_LOAD_RESULTS] HAND_DATA_STRATEGY is empty after loading.")
+            return data
     except FileNotFoundError:
         print("Warning: aggregated_results.pkl not found. Using empty dictionary.")
         return {}
+    except Exception as e:
+        print(f"Error loading or reading aggregated_results.pkl: {e}")
+        #print("[DEBUG_LOAD_RESULTS] Using empty dictionary due to error.")
+        return {}
 HAND_DATA_STRATEGY = load_results()
+
+# Helper function to convert app's hand string format to the strategy lookup format
+def convert_hand_to_lookup_format(hand_str_app):
+    """
+    Converts hand string from app's format (e.g., "A10s", "KQs")
+    to strategy lookup format (e.g., "A Ts", "K Qs").
+    Assumes strategy keys use 'T' for Ten and a space separator.
+    """
+    ranks = {"2" : 2, "3" : 3, "4" : 4, "5" : 5, "6" : 6, "7" : 7, "8" : 8, "9" : 9, "10" : 10, "J" : 11, "Q" : 12, "K" : 13, "A" : 14}
+    # After replacement, the rank part (e.g., "AT", "KQ", "T9") is expected to be two characters.
+    # hand_str_app could be "AKs" (3 chars) or "A10s" (4 chars).
+    # processed_hand_str will be 3 chars, e.g., "AKs" or "ATs".
+    if ranks.get(hand_str_app[0], 0) < ranks.get(hand_str_app[1], 0):
+        rank1_char = hand_str_app[0]
+        rank2_char = hand_str_app[1]
+    else:
+        rank1_char = hand_str_app[1]
+        rank2_char = hand_str_app[0]
+    suit_info = hand_str_app[2]
+    
+    return f"{rank1_char} {rank2_char}{suit_info}"
+
+# Helper function to generate the infoset string for strategy lookup
+def generate_infoset_for_lookup(prior_actions):
+    """
+    Generates the infoset string based on prior player actions.
+    prior_actions: list of decisions ("ALL_IN" or "FOLD") from CO, BTN, SB in order.
+    Player IDs in infoset (P0, P1, P2, P3) map to (CO, BTN, SB, BB).
+    """
+    num_prior = len(prior_actions)
+    
+    if num_prior == 0:  # Current player is CO
+        # This is the typical starting infoset for the first actor (CO)
+        return "P2:[P0:P][P1:P]"
+        
+    elif num_prior == 1:  # Current player is BTN (CO has acted)
+        co_act_char = 'A' if prior_actions[0] == 'ALL_IN' else 'F'
+        # Infoset for BTN, given CO's action (P2 refers to CO in this context)
+        return f"P3:[P0:P][P1:P][P2:{co_act_char}]"
+        
+    elif num_prior == 2:  # Current player is SB (CO and BTN have acted)
+        co_act_char = 'A' if prior_actions[0] == 'ALL_IN' else 'F'
+        btn_act_char = 'A' if prior_actions[1] == 'ALL_IN' else 'F'
+        # Infoset for SB, given CO (P2) and BTN (P3) actions
+        return f"P0:[P1:P][P2:{co_act_char}][P3:{btn_act_char}]"
+        
+    elif num_prior == 3:  # Current player is BB (CO, BTN, SB have acted)
+        co_act_char = 'A' if prior_actions[0] == 'ALL_IN' else 'F'
+        btn_act_char = 'A' if prior_actions[1] == 'ALL_IN' else 'F'
+        sb_act_char = 'A' if prior_actions[2] == 'ALL_IN' else 'F'
+        # Infoset for BB, given CO (P0), BTN (P2), and SB (P3) actions
+        return f"P1:[P0:{co_act_char}][P2:{btn_act_char}][P3:{sb_act_char}]"
+    
+    # Fallback, though for a 4-player game, num_prior should be 0, 1, 2, or 3.
+    print(f"Warning: Unexpected number of prior actions ({num_prior}) for infoset generation.")
+    return "ERROR_UNKNOWN_INFOSET_CONDITION"
 
 # Helper function to find card image files with various naming conventions
 def find_card_image_filename(card_str):
@@ -185,12 +255,12 @@ def find_card_image_filename(card_str):
     Returns the filename (e.g., "9H.png") if found, or a default if not.
     """
     if not card_str or len(card_str) < 2:
-        print(f"[CARD_IMG_DEBUG] Invalid card_str: {card_str}, returning back.png")
+        #print(f"[CARD_IMG_DEBUG] Invalid card_str: {card_str}, returning back.png")
         return "back.png"  # Should ideally not happen with valid card strings
 
     rank_part = card_str[:-1]  # e.g., "9", "A", "10"
     suit_part = card_str[-1]   # e.g., "h", "S", "d" (suit from input string)
-    print(f"[CARD_IMG_DEBUG] Finding image for card_str: '{card_str}' (Rank: '{rank_part}', Suit: '{suit_part}')")
+    #print(f"[CARD_IMG_DEBUG] Finding image for card_str: '{card_str}' (Rank: '{rank_part}', Suit: '{suit_part}')")
 
     base_image_path = os.path.join('static', 'card_images')
 
@@ -207,13 +277,13 @@ def find_card_image_filename(card_str):
         if p not in unique_patterns:
             unique_patterns.append(p)
     
-    print(f"[CARD_IMG_DEBUG] Trying patterns for '{card_str}': {unique_patterns}")
+    #print(f"[CARD_IMG_DEBUG] Trying patterns for '{card_str}': {unique_patterns}")
 
     for pattern_filename in unique_patterns:
         full_path = os.path.join(base_image_path, pattern_filename)
         # print(f"[CARD_IMG_DEBUG] Checking for: '{full_path}'") # Optional: very verbose
         if os.path.exists(full_path):
-            print(f"[CARD_IMG_DEBUG] Found existing image for '{card_str}': '{pattern_filename}' at path '{full_path}'")
+            #print(f"[CARD_IMG_DEBUG] Found existing image for '{card_str}': '{pattern_filename}' at path '{full_path}'")
             return pattern_filename
         # else: # Optional: very verbose
             # print(f"[CARD_IMG_DEBUG] Image not found: '{pattern_filename}' at path '{full_path}'")
@@ -278,24 +348,63 @@ def format_hand_for_strategy(cards_list):
     
     rank_values = evaluator.RANK_VALUES
     # Order by rank (higher rank first)
-    if rank_values.get(card1_rank, 0) < rank_values.get(card2_rank, 0):
-        return f"{card2_rank}{card1_rank}{suited}"
-    return f"{card1_rank}{card2_rank}{suited}"
+    if rank_values.get(card1_rank, 0) > rank_values.get(card2_rank, 0):
+        return f"{card2_rank} {card1_rank}{suited}"
+    return f"{card1_rank} {card2_rank}{suited}"
 
 
 def simulate_optimal_decision(player_position_name, player_hand_str, state):
-    # player_position_name is "CO", "BTN", etc.
-    # player_hand_str is "AKs", "72o", etc.
-    # This is a simplified version of your strategy lookup
-    # You might need to adjust the infoset based on game flow if your strategy is complex
-    initial_infoset = "P2:[P0:P][P1:P]" # Example, adjust as needed
+    # player_position_name is "CO", "BTN", "SB", "BB"
+    # player_hand_str is "AKs", "107o", etc. (from format_hand_for_strategy)
+    # state is the current game state
+    #print(f"\n[DEBUG_SIMULATE_DECISION] Simulating for: {player_position_name}, Hand: {player_hand_str}")
 
-    fold_prob, all_in_prob = HAND_DATA_STRATEGY.get((initial_infoset, player_hand_str), (0.5, 0.5))
-    
-    if random.random() < fold_prob:
+    player_map = {"CO": 0, "BTN": 1, "SB": 2, "BB": 3}
+    current_player_game_idx = player_map.get(player_position_name)
+
+    if current_player_game_idx is None:
+        print(f"Warning: Unknown player position '{player_position_name}' in simulate_optimal_decision. Defaulting to FOLD.")
         return "FOLD"
-    else:
-        return "ALL_IN"
+
+    # Get decisions of players who acted before the current player
+    # state["decisions"] stores actions for CO, BTN, SB, BB by their game index
+    prior_raw_decisions = state["decisions"][:current_player_game_idx]
+    
+    # Ensure prior decisions are valid ("ALL_IN" or "FOLD"), default to "FOLD" if empty/unexpected
+    prior_actions_for_infoset = []
+    for dec in prior_raw_decisions:
+        if dec in ["ALL_IN", "FOLD"]:
+            prior_actions_for_infoset.append(dec)
+        else:
+            # If a prior player's decision isn't set or is invalid, assume FOLD for infoset robustness
+            # This might happen if state["decisions"] wasn't fully populated as expected
+            prior_actions_for_infoset.append("FOLD") 
+
+
+    infoset_key = generate_infoset_for_lookup(prior_actions_for_infoset)
+    hand_key = player_hand_str # Convert "A10s" to "A Ts"
+    #print(f"[DEBUG_SIMULATE_DECISION] Infoset Key for lookup: '{infoset_key}'")
+    #print(f"[DEBUG_SIMULATE_DECISION] Hand Key for lookup: '{hand_key}'")
+
+    # The strategy data is expected to store (fold_probability, all_in_probability)
+    # Default to 50/50 fold/all-in if the specific situation is not in the strategy
+    default_probabilities = (0.5, 0.5) # Default if key not found
+    retrieved_probabilities = HAND_DATA_STRATEGY.get((infoset_key, hand_key), default_probabilities)
+    
+    fold_prob, all_in_prob = retrieved_probabilities
+    
+    # if retrieved_probabilities == default_probabilities and (infoset_key, hand_key) not in HAND_DATA_STRATEGY:
+    #     print(f"[DEBUG_SIMULATE_DECISION] Key ({infoset_key}, {hand_key}) not found in HAND_DATA_STRATEGY. Using default probabilities: {default_probabilities}")
+    # else:
+    #     print(f"[DEBUG_SIMULATE_DECISION] Retrieved probabilities for ({infoset_key}, {hand_key}): Fold Prob={fold_prob}, All-In Prob={all_in_prob}")
+    
+    # Decision logic based on all_in_prob, as seen in the provided simulation code
+    decision = "FOLD" # Default decision
+    if random.random() < all_in_prob:
+        decision = "ALL_IN"
+    
+    #print(f"[DEBUG_SIMULATE_DECISION] Simulated decision: {decision} (random draw vs all_in_prob {all_in_prob})")
+    return decision
 
 @app.route('/')
 def index():
@@ -473,28 +582,39 @@ def make_decision_api(decision_type):
         log_message(state, f"You go ALL IN. Your bet this hand: {state['player_bets_this_hand'][user_original_position_this_hand]:.2f} BB. Pot: {state['pot_size']:.2f} BB")
 
 
-    # Simulate other players' decisions (they always ALL_IN or FOLD based on strategy)
-    # For this simplified game, let's assume opponents make their decisions now.
-    # In a real game, this would be sequential.
+    # Simulate decisions for other players who haven't acted yet, using the optimal strategy.
     for i in range(len(state["players"])):
         if i == user_original_position_this_hand:
-            continue # Skip user
+            continue # Skip user, decision already made
 
-        # Simplified opponent strategy: CO, BTN, SB might fold or go all-in. BB might check or go all-in.
-        # For now, let's make them all ALL_IN if they haven't folded yet.
-        # This part needs your game's specific opponent logic.
-        # Here, we'll just assume they ALL_IN if they are not the user.
-        # A more realistic simulation would use the pre-computed strategies.
-        if not state["decisions"][i]: # If no decision yet
-            opponent_decision = "ALL_IN" # Simplified: opponents always go all-in
+        if not state["decisions"][i]: # If no decision yet for this player
+            player_pos_name = state["players"][i]
+            
+            # Ensure cards are available for decision making
+            if not state["all_player_cards"] or i >= len(state["all_player_cards"]) or not state["all_player_cards"][i]:
+                log_message(state, f"Warning: Cards not found for {player_pos_name}, defaulting their action to FOLD.")
+                state["decisions"][i] = "FOLD" # Fallback if cards are missing
+                continue
+
+            player_actual_cards = state["all_player_cards"][i]
+            player_hand_str = format_hand_for_strategy(player_actual_cards)
+            
+            # Call simulate_optimal_decision for opponents
+            opponent_decision = simulate_optimal_decision(player_pos_name, player_hand_str, state)
             state["decisions"][i] = opponent_decision
-            log_message(state, f"{state['players'][i]} decides: {opponent_decision}")
+            log_message(state, f"{state['players'][i]} ({player_hand_str}) decided: {opponent_decision}")
+
             if opponent_decision == "ALL_IN":
+                # Amount to add is their current stack (if > 0)
                 amount_opponent_adds_to_bet = state["player_stacks"][i]
-                state["player_bets_this_hand"][i] += amount_opponent_adds_to_bet
-                state["pot_size"] = round(state["pot_size"] + amount_opponent_adds_to_bet, 2)
-                state["player_stacks"][i] = 0
-                log_message(state, f"{state['players'][i]} goes ALL IN. Their bet: {state['player_bets_this_hand'][i]:.2f} BB. Pot: {state['pot_size']:.2f} BB")
+                if amount_opponent_adds_to_bet > 0:
+                    state["player_bets_this_hand"][i] += amount_opponent_adds_to_bet # Add to existing bet (e.g., blind)
+                    state["pot_size"] = round(state["pot_size"] + amount_opponent_adds_to_bet, 2)
+                    state["player_stacks"][i] = 0
+                    log_message(state, f"{state['players'][i]} goes ALL IN. Their bet: {state['player_bets_this_hand'][i]:.2f} BB. Pot: {state['pot_size']:.2f} BB")
+                else:
+                    log_message(state, f"{state['players'][i]} is already all-in or has no chips to bet for ALL_IN decision.")
+            # If FOLD, their stack and current bet (e.g. blind) remain. The decision is logged above.
 
 
     # Determine winner
