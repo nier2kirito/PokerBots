@@ -1,14 +1,14 @@
 backend:
     functions:
         - entry: app.py
-          handler: handler
+          handler: app
           name: function-flask
           path: .
           type: httpServer
     language:
         name: python
         packageManager: pip
-        runtime: python3.13.x
+        runtime: python3.11.x
     path: .
 name: evosolver
 region: eu-central-1
