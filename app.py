@@ -235,7 +235,7 @@ def get_initial_game_state():
         "community_cards": [], # List of 5 cards, e.g., ["2S", "3H", "4D", "5C", "6S"]
         "decisions": [""] * 4, # Initialize with empty strings for 4 players
         "pot_size": 0.0,
-        "small_blind": 0.4,
+        "small_blind": 0.5,
         "big_blind": 1.0,
         "log_messages": ["Game started! Click 'Deal New Hand' to begin."],
         "game_phase": "pre_deal", # "pre_deal", "awaiting_decision", "showdown"
