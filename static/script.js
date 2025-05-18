@@ -97,12 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
             playerArea.classList.add('player-area');
             playerArea.id = `player-${playerName}`; // e.g. player-CO
 
-            if (index === state.user_player_position_idx && state.game_phase === "awaiting_decision") {
-                 playerArea.classList.add('current-player');
+            // Determine which position to highlight based on game phase
+            const positionToHighlight = state.game_phase === "showdown" && state.user_player_position_idx_last_hand !== undefined
+                ? state.user_player_position_idx_last_hand  // Use last hand position during showdown
+                : state.user_player_position_idx;           // Otherwise use current position
+            
+            // Highlight the user's position
+            if (index === positionToHighlight) {
+                playerArea.classList.add('current-player');
             }
-            // else { // Not strictly necessary to remove if clearing all and rebuilding
-            //      playerArea.classList.remove('current-player');
-            // }
 
             // Highlight winner(s) at showdown
             if (state.game_phase === "showdown" && state.winner_indices && state.winner_indices.includes(index)) {
