@@ -415,6 +415,38 @@ def get_state_api():
     state = get_game_state()
     display_state = state.copy()
     
+    # Check if user is BB and all others have folded - if so, auto-decide ALL_IN
+    if state["game_phase"] == "awaiting_decision":
+        co_idx = state["players"].index("CO")
+        btn_idx = state["players"].index("BTN")
+        sb_idx = state["players"].index("SB")
+        bb_idx = state["players"].index("BB")
+        
+        if state["user_player_position_idx"] == bb_idx and \
+           state["decisions"][co_idx] == "FOLD" and \
+           state["decisions"][btn_idx] == "FOLD" and \
+           state["decisions"][sb_idx] == "FOLD":
+            
+            # Auto-decide ALL_IN for user as BB
+            state["decisions"][bb_idx] = "ALL_IN"
+            log_message(state, f"You (BB) automatically win as all others folded. Your decision set to ALL_IN.")
+            
+            # Update BB's bet and stack for the automatic ALL_IN
+            amount_to_add_to_pot = state["player_stacks"][bb_idx]
+            state["player_bets_this_hand"][bb_idx] += amount_to_add_to_pot
+            state["pot_size"] = round(state["pot_size"] + amount_to_add_to_pot, 2)
+            state["player_stacks"][bb_idx] = 0
+            
+            # Determine winner and move to showdown
+            determine_winner(state, state["user_player_position_idx"])
+            state["game_phase"] = "showdown"
+            state["user_player_position_idx_last_hand"] = state["user_player_position_idx"]
+            state["user_player_position_idx"] = (state["user_player_position_idx"] + 1) % len(state["players"])
+            save_game_state(state)
+            
+            # Since we modified the state, update display_state
+            display_state = state.copy()
+    
     processed_all_player_cards = []
     all_player_cards_data = state.get("all_player_cards", [])
     player_decisions_data = state.get("decisions", [])
@@ -557,6 +589,35 @@ def deal_cards_api():
             state["player_stacks"][i] = 0
         # If FOLD, player_bets_this_hand[i] remains as is (their blind, or 0).
 
+    # Check if user is BB and all others have folded - if so, auto-decide ALL_IN
+    co_idx = state["players"].index("CO")
+    btn_idx = state["players"].index("BTN")
+    sb_idx = state["players"].index("SB")
+    bb_idx = state["players"].index("BB")
+    
+    if state["user_player_position_idx"] == bb_idx and \
+       state["decisions"][co_idx] == "FOLD" and \
+       state["decisions"][btn_idx] == "FOLD" and \
+       state["decisions"][sb_idx] == "FOLD":
+        
+        # Auto-decide ALL_IN for user as BB
+        state["decisions"][bb_idx] = "ALL_IN"
+        log_message(state, f"You (BB) automatically win as all others folded. Your decision set to ALL_IN.")
+        
+        # Update BB's bet and stack for the automatic ALL_IN
+        amount_to_add_to_pot = state["player_stacks"][bb_idx]
+        state["player_bets_this_hand"][bb_idx] += amount_to_add_to_pot
+        state["pot_size"] = round(state["pot_size"] + amount_to_add_to_pot, 2)
+        state["player_stacks"][bb_idx] = 0
+        
+        # Determine winner and move to showdown
+        determine_winner(state, state["user_player_position_idx"])
+        state["game_phase"] = "showdown"
+        state["user_player_position_idx_last_hand"] = state["user_player_position_idx"]
+        state["user_player_position_idx"] = (state["user_player_position_idx"] + 1) % len(state["players"])
+        save_game_state(state)
+        return jsonify({"success": True})
+
     state["game_phase"] = "awaiting_decision"
     save_game_state(state)
     return jsonify({"success": True})
@@ -581,6 +642,35 @@ def make_decision_api(decision_type):
         state["player_stacks"][user_original_position_this_hand] = 0
         log_message(state, f"You go ALL IN. Your bet this hand: {state['player_bets_this_hand'][user_original_position_this_hand]:.2f} BB. Pot: {state['pot_size']:.2f} BB")
 
+    # Check if CO, BTN, and SB have all folded - if so, BB automatically wins
+    co_idx = state["players"].index("CO")
+    btn_idx = state["players"].index("BTN")
+    sb_idx = state["players"].index("SB")
+    bb_idx = state["players"].index("BB")
+    
+    # Check if CO, BTN, and SB have all folded
+    if (state["decisions"][co_idx] == "FOLD" or not state["decisions"][co_idx]) and \
+       (state["decisions"][btn_idx] == "FOLD" or not state["decisions"][btn_idx]) and \
+       (state["decisions"][sb_idx] == "FOLD" or not state["decisions"][sb_idx]):
+        
+        # BB automatically wins - set decision to ALL_IN if not already decided
+        if not state["decisions"][bb_idx]:
+            state["decisions"][bb_idx] = "ALL_IN"
+            log_message(state, f"BB automatically wins as all others folded. BB decision set to ALL_IN.")
+            
+            # Update BB's bet and stack for the automatic ALL_IN
+            amount_to_add_to_pot = state["player_stacks"][bb_idx]
+            state["player_bets_this_hand"][bb_idx] += amount_to_add_to_pot
+            state["pot_size"] = round(state["pot_size"] + amount_to_add_to_pot, 2)
+            state["player_stacks"][bb_idx] = 0
+            
+        # Skip simulating other decisions and go straight to determining winner
+        determine_winner(state, user_original_position_this_hand)
+        state["game_phase"] = "showdown"
+        state["user_player_position_idx_last_hand"] = user_original_position_this_hand
+        state["user_player_position_idx"] = (user_original_position_this_hand + 1) % len(state["players"])
+        save_game_state(state)
+        return jsonify({"success": True})
 
     # Simulate decisions for other players who haven't acted yet, using the optimal strategy.
     for i in range(len(state["players"])):
@@ -589,6 +679,25 @@ def make_decision_api(decision_type):
 
         if not state["decisions"][i]: # If no decision yet for this player
             player_pos_name = state["players"][i]
+            
+            # Check if this is BB and all others have folded
+            if i == bb_idx and \
+               state["decisions"][co_idx] == "FOLD" and \
+               state["decisions"][btn_idx] == "FOLD" and \
+               state["decisions"][sb_idx] == "FOLD":
+                
+                # BB automatically wins - set decision to ALL_IN
+                state["decisions"][bb_idx] = "ALL_IN"
+                log_message(state, f"BB automatically wins as all others folded. BB decision set to ALL_IN.")
+                
+                # Update BB's bet and stack for the automatic ALL_IN
+                amount_to_add_to_pot = state["player_stacks"][bb_idx]
+                state["player_bets_this_hand"][bb_idx] += amount_to_add_to_pot
+                state["pot_size"] = round(state["pot_size"] + amount_to_add_to_pot, 2)
+                state["player_stacks"][bb_idx] = 0
+                
+                # Skip simulating other decisions
+                break
             
             # Ensure cards are available for decision making
             if not state["all_player_cards"] or i >= len(state["all_player_cards"]) or not state["all_player_cards"][i]:
@@ -615,7 +724,25 @@ def make_decision_api(decision_type):
                 else:
                     log_message(state, f"{state['players'][i]} is already all-in or has no chips to bet for ALL_IN decision.")
             # If FOLD, their stack and current bet (e.g. blind) remain. The decision is logged above.
-
+            
+            # After each player's decision, check if BB is the only one left
+            if state["decisions"][co_idx] == "FOLD" and \
+               state["decisions"][btn_idx] == "FOLD" and \
+               state["decisions"][sb_idx] == "FOLD" and \
+               not state["decisions"][bb_idx]:
+                
+                # BB automatically wins - set decision to ALL_IN
+                state["decisions"][bb_idx] = "ALL_IN"
+                log_message(state, f"BB automatically wins as all others folded. BB decision set to ALL_IN.")
+                
+                # Update BB's bet and stack for the automatic ALL_IN
+                amount_to_add_to_pot = state["player_stacks"][bb_idx]
+                state["player_bets_this_hand"][bb_idx] += amount_to_add_to_pot
+                state["pot_size"] = round(state["pot_size"] + amount_to_add_to_pot, 2)
+                state["player_stacks"][bb_idx] = 0
+                
+                # Skip simulating other decisions
+                break
 
     # Determine winner
     determine_winner(state, user_original_position_this_hand) # Pass user's original position
