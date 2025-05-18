@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-In or Fold Bot - GGPoker Format</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div id="hamburger-menu-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <nav id="side-menu">
+        <ul>
+            <li><a href="#" class="menu-link" data-page="poker-game-content">All-In or Fold (AoF)</a></li>
+            <li><a href="#" class="menu-link" data-page="spin-solver-content">Spin and Go Solver</a></li>
+            <!-- Add other menu items here in the future -->
+        </ul>
+    </nav>
+
+    <div id="main-content-area">
+        <div id="poker-game-content" class="page-view active-page">
+            <div class="flex-container">
+                <div class="container">
+                    <h1>All-In or Fold Bot - GGPoker Format</h1>
+
+                    <div id="poker-table">
+                        <div id="community-cards-area">
+                            <!-- Community cards will be populated here by JS -->
+                        </div>
+
+                        <div id="player-areas">
+                            <!-- Player areas will be populated here by JS -->
+                        </div>
+                        
+                        <div id="pot-area">
+                            Pot: <span id="pot-size">0</span> BB
+                        </div>
+                    </div>
+
+                    <div id="player-hand-display" style="display: none;">
+                        Your Hand: <span id="user-card1">?</span> <span id="user-card2">?</span>
+                        (<span id="user-position">CO</span>)
+                    </div>
+                    
+                    <div id="controls">
+                        <button id="deal-button">Deal New Hand</button>
+                        <button id="all-in-button" disabled>ALL_IN</button>
+                        <button id="fold-button" disabled>FOLD</button>
+                        <button id="restart-button">Restart Game</button>
+                    </div>
+
+                    <div id="performance-graph-container">
+                        <canvas id="performanceChart"></canvas>
+                        <h2>Your Performance (BB)</h2>
+                    </div>
+
+                    <div id="log-area">
+                        <h2>Game Log</h2>
+                        <ul id="log-messages">
+                            <!-- Log messages will be populated here -->
+                        </ul>
+                    </div>
+                    
+                    <div id="winner-display">
+                        <!-- Winner info will be shown here -->
+                    </div>
+
+                    <p>Hands Played: <span id="hands-played">0</span></p>
+                </div>
+                
+                <div class="container-right">
+                    <h2>Additional Information</h2>
+                    <div class="info-section">
+                        <h3>What is All-In or Fold?</h3>
+                        <p>All-In or Fold (AoF) is a fast-paced poker format where players can only choose between going all-in or folding their hand. There's no option to call or make smaller bets, making gameplay quick and decisions straightforward but strategically challenging.</p>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>Learn More</h3>
+                        <div class="rules-section">
+                            <h4>Basic Rules:</h4>
+                            <ul>
+                                <li>Players can only go all-in or fold - no calling or raising allowed</li>
+                                <li>Blinds structure follows standard Texas Hold'em rules</li>
+                                <li>Action proceeds clockwise from the small blind</li>
+                                <li>Multiple all-ins create side pots automatically</li>
+                                <li>Standard poker hand rankings apply</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>FAQ</h3>
+                        <div class="faq-item">
+                            <h4>Who am I playing against?</h4>
+                            <p>You're playing against 3 bots that use a near-optimal strategy. Good luck trying to beat them! 😉</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>Is there a reward for beating the bots?</h4>
+                            <p><strong>If you beat the bots after playing 1000 hands with them, we have a special gift for you!</strong> Just send a screenshot to our Instagram page <a href="https://instagram.com/evo_solver" target="_blank">@evo_solver</a> to claim your reward.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>What provides the optimal experience on this website?</h4>
+                            <p>Chrome, Firefox, and Edge provide the best experience. Note that browser extensions may affect functionality - consider deactivating ad blockers for the best experience.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>Is this game mobile-friendly?</h4>
+                            <p>Yes, the interface is responsive and works on both desktop and mobile devices.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>How is my performance tracked?</h4>
+                            <p>Your results are displayed in the performance graph showing your cumulative big blinds won or lost.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="spin-solver-content" class="page-view">
+            <div class="container">
+                 <h1>Spin and Go Bot</h1>
+                 <p style="text-align: center; font-size: 1.2em; margin-top: 30px; color: #EAEAEA;">
+                    This page will be online very soon! 🚀
+                 </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 

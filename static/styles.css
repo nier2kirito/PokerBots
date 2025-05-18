@@ -1,0 +1,24 @@
+.main-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    width: 100%;
+}
+
+.container-left, .container-right {
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.container-left {
+    flex: 3; /* 60% of space */
+}
+
+.container-right {
+    flex: 2; /* 40% of space */
+    display: flex;
+    flex-direction: column;
+} 
