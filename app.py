@@ -620,10 +620,10 @@ def restart_api():
     return jsonify({"success": True})
 
 
-#if __name__ == '__main__':
-    #static_card_dir = os.path.join('static', 'card_images')
-    #if not os.path.exists(static_card_dir):
-        #s.makedirs(static_card_dir, exist_ok=True)
-        #print(f"Created {static_card_dir} directory. Please add card images there.")
+if __name__ == '__main__':
+    static_card_dir = os.path.join('static', 'card_images')
+    if not os.path.exists(static_card_dir):
+        os.makedirs(static_card_dir, exist_ok=True)
+        print(f"Created {static_card_dir} directory. Please add card images there.")
     #app.run(debug=True) 
     #app.run(host="0.0.0.0", port = 8080)
