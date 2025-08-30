@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Adblock detection
+    detectAdBlocker();
+    
     const dealButton = document.getElementById('deal-button');
     const allInButton = document.getElementById('all-in-button');
     const foldButton = document.getElementById('fold-button');
@@ -252,4 +255,75 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial state load
     fetchAndUpdateState();
-}); 
+});
+
+// Adblock detection function
+function detectAdBlocker() {
+    // Method 1: Try to create a fake ad element
+    const adElement = document.createElement('div');
+    adElement.innerHTML = '&nbsp;';
+    adElement.className = 'adsbox';
+    adElement.style.position = 'absolute';
+    adElement.style.left = '-10000px';
+    adElement.style.top = '-10000px';
+    adElement.style.width = '1px';
+    adElement.style.height = '1px';
+    document.body.appendChild(adElement);
+
+    // Method 2: Try to load a fake ad script
+    const fakeAdScript = document.createElement('script');
+    fakeAdScript.type = 'text/javascript';
+    fakeAdScript.async = true;
+    fakeAdScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+    
+    let adBlockDetected = false;
+    
+    // Check if the ad element is hidden (common adblock behavior)
+    setTimeout(() => {
+        const computedStyle = window.getComputedStyle(adElement);
+        if (computedStyle.display === 'none' || 
+            computedStyle.visibility === 'hidden' || 
+            adElement.offsetHeight === 0 ||
+            adElement.offsetWidth === 0) {
+            adBlockDetected = true;
+        }
+        
+        // Remove the test element
+        document.body.removeChild(adElement);
+        
+        if (adBlockDetected) {
+            showAdBlockWarning();
+        }
+    }, 100);
+    
+    // Method 3: Check for script loading failure
+    fakeAdScript.onerror = () => {
+        showAdBlockWarning();
+    };
+    
+    // Add script to check loading
+    document.head.appendChild(fakeAdScript);
+    
+    // Remove script after test
+    setTimeout(() => {
+        if (document.head.contains(fakeAdScript)) {
+            document.head.removeChild(fakeAdScript);
+        }
+    }, 1000);
+}
+
+// Show adblock warning modal
+function showAdBlockWarning() {
+    const modal = document.getElementById('adblock-warning-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+// Hide adblock warning modal
+function hideAdBlockWarning() {
+    const modal = document.getElementById('adblock-warning-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+} 

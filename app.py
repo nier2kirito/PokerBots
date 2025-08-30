@@ -170,24 +170,36 @@ SUITS = ['h', 'd', 'c', 's'] # hearts, diamonds, clubs, spades
 # Load hand data (strategy)
 def load_results():
     try:
+        # First try to load from JSON file
+        import json
+        json_path = os.path.join('static', 'aggregated_results.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                json_data = json.load(f)
+                # Convert JSON format to Python tuple format
+                # JSON format: "P2:[P0:P][P1:P]|KJo" -> Python format: ("P2:[P0:P][P1:P]", "KJo")
+                converted_data = {}
+                for json_key, probabilities in json_data.items():
+                    if '|' in json_key:
+                        infoset, hand = json_key.split('|', 1)
+                        tuple_key = (infoset, hand)
+                        # Convert to the expected tuple format (fold_prob, all_in_prob)
+                        fold_prob = probabilities.get('fold_probability', 0.5)
+                        all_in_prob = probabilities.get('all_in_probability', 0.5)
+                        converted_data[tuple_key] = (fold_prob, all_in_prob)
+                print(f"Successfully loaded {len(converted_data)} strategy entries from aggregated_results.json")
+                return converted_data
+        
+        # Fallback to pickle file if JSON doesn't exist
         with open('aggregated_results.pkl', 'rb') as f:
             data = pickle.load(f)
-            # print(f"[DEBUG_LOAD_RESULTS] Successfully loaded aggregated_results.pkl.")
-            # print(f"[DEBUG_LOAD_RESULTS] Number of entries in HAND_DATA_STRATEGY: {len(data)}")
-            # Print a sample entry if data is not empty
-            # if data:
-            #     sample_key = next(iter(data))
-            #     sample_value = data[sample_key]
-            #     #print(f"[DEBUG_LOAD_RESULTS] Sample entry - Key: {sample_key}, Value: {sample_value}")
-            # else:
-            #     #print("[DEBUG_LOAD_RESULTS] HAND_DATA_STRATEGY is empty after loading.")
+            print(f"Successfully loaded aggregated_results.pkl with {len(data)} entries.")
             return data
     except FileNotFoundError:
-        print("Warning: aggregated_results.pkl not found. Using empty dictionary.")
+        print("Warning: Neither aggregated_results.json nor aggregated_results.pkl found. Using empty dictionary.")
         return {}
     except Exception as e:
-        print(f"Error loading or reading aggregated_results.pkl: {e}")
-        #print("[DEBUG_LOAD_RESULTS] Using empty dictionary due to error.")
+        print(f"Error loading strategy data: {e}")
         return {}
 HAND_DATA_STRATEGY = load_results()
 
@@ -347,10 +359,20 @@ def format_hand_for_strategy(cards_list):
     suited = 's' if card1_suit == card2_suit else 'o'
     
     rank_values = evaluator.RANK_VALUES
-    # Order by rank (higher rank first)
-    if rank_values.get(card1_rank, 0) > rank_values.get(card2_rank, 0):
-        return f"{card2_rank} {card1_rank}{suited}"
-    return f"{card1_rank} {card2_rank}{suited}"
+    # Order by rank (higher rank first) using original rank values
+    card1_value = rank_values.get(card1_rank, 0)
+    card2_value = rank_values.get(card2_rank, 0)
+    
+    # Keep "10" as is - aggregated results use "10" format, not "T"
+    
+    # Handle pocket pairs (same rank) - no suit designation needed
+    if card1_value == card2_value:
+        return f"{card1_rank}{card2_rank}"  # e.g., "66", "AA", "1010"
+    
+    # Order by rank (higher rank first) - aggregated results expect higher rank first (no spaces)
+    if card1_value > card2_value:
+        return f"{card1_rank}{card2_rank}{suited}"  # card1 is higher, so it goes first
+    return f"{card2_rank}{card1_rank}{suited}"  # card2 is higher, so it goes first
 
 
 def simulate_optimal_decision(player_position_name, player_hand_str, state):
@@ -389,8 +411,13 @@ def simulate_optimal_decision(player_position_name, player_hand_str, state):
     # The strategy data is expected to store (fold_probability, all_in_probability)
     # Default to 50/50 fold/all-in if the specific situation is not in the strategy
     default_probabilities = (0.5, 0.5) # Default if key not found
-    retrieved_probabilities = HAND_DATA_STRATEGY.get((infoset_key, hand_key), default_probabilities)
+    lookup_key = (infoset_key, hand_key)
     
+    if lookup_key not in HAND_DATA_STRATEGY:
+        print(f"[MISSING KEY DEBUG] Key not found: ({infoset_key}, {hand_key})")
+        print(f"[MISSING KEY DEBUG] Player: {player_position_name}, Using default probabilities: {default_probabilities}")
+    
+    retrieved_probabilities = HAND_DATA_STRATEGY.get(lookup_key, default_probabilities)
     fold_prob, all_in_prob = retrieved_probabilities
     
     # if retrieved_probabilities == default_probabilities and (infoset_key, hand_key) not in HAND_DATA_STRATEGY:
@@ -400,8 +427,16 @@ def simulate_optimal_decision(player_position_name, player_hand_str, state):
     
     # Decision logic based on all_in_prob, as seen in the provided simulation code
     decision = "FOLD" # Default decision
-    if random.random() < all_in_prob:
+    random_value = random.random()
+    if random_value < all_in_prob:
         decision = "ALL_IN"
+    
+    # Debug output specifically for key hands to verify they're working correctly
+    if hand_key in ["K7o", "106o", "1010", "66", "77", "88", "99"]:
+        print(f"[{hand_key} DEBUG] Player: {player_position_name}, Infoset: {infoset_key}")
+        print(f"[{hand_key} DEBUG] Probabilities: fold={fold_prob:.3f} ({fold_prob*100:.1f}%), all_in={all_in_prob:.3f} ({all_in_prob*100:.1f}%)")
+        print(f"[{hand_key} DEBUG] Random value: {random_value:.3f}, Decision: {decision}")
+        print(f"[{hand_key} DEBUG] Key lookup: ({infoset_key}, {hand_key}) -> {'FOUND' if (infoset_key, hand_key) in HAND_DATA_STRATEGY else 'NOT FOUND'}")
     
     #print(f"[DEBUG_SIMULATE_DECISION] Simulated decision: {decision} (random draw vs all_in_prob {all_in_prob})")
     return decision
@@ -873,4 +908,4 @@ if __name__ == '__main__':
         os.makedirs(static_card_dir, exist_ok=True)
         print(f"Created {static_card_dir} directory. Please add card images there.")
     #app.run(debug=True) 
-    app.run(host="0.0.0.0", port = 8080)
+    app.run(host="0.0.0.0", port = 5000)

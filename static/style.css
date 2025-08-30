@@ -525,4 +525,119 @@ button:disabled {
     width: 100%;
     max-width: none;
     padding: 0 20px;
+}
+
+/* Adblock Warning Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Dark overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000; /* Above all other elements */
+    backdrop-filter: blur(3px); /* Blur background */
+}
+
+.modal-content {
+    background-color: #1C1C2E; /* Match container background */
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 0 30px rgba(80, 227, 194, 0.4), 0 0 15px rgba(80, 227, 194, 0.2) inset;
+    border: 2px solid #50E3C2;
+    animation: modal-slide-in 0.3s ease-out;
+}
+
+.modal-header {
+    background-color: #50E3C2;
+    color: #0A0F1E;
+    padding: 20px 25px;
+    border-radius: 10px 10px 0 0;
+    text-align: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #0A0F1E;
+    text-shadow: none;
+    font-size: 1.4em;
+    letter-spacing: 1px;
+}
+
+.modal-body {
+    padding: 25px;
+    color: #EAEAEA;
+    line-height: 1.6;
+}
+
+.modal-body p {
+    margin: 0 0 15px 0;
+}
+
+.modal-body ul {
+    margin: 15px 0;
+    padding-left: 20px;
+}
+
+.modal-body li {
+    margin: 8px 0;
+    color: #50E3C2;
+}
+
+.modal-body strong {
+    color: #50E3C2;
+}
+
+.modal-body em {
+    color: #B0B0B0;
+    font-style: italic;
+}
+
+.modal-footer {
+    padding: 20px 25px;
+    text-align: center;
+    border-top: 1px solid rgba(80, 227, 194, 0.3);
+}
+
+.modal-button {
+    background-color: transparent;
+    color: #50E3C2;
+    border: 2px solid #50E3C2;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 8px rgba(80, 227, 194, 0.2);
+}
+
+.modal-button:hover {
+    background-color: #50E3C2;
+    color: #0A0F1E;
+    box-shadow: 0 0 15px rgba(80, 227, 194, 0.6);
+    transform: translateY(-1px);
+}
+
+.modal-button:active {
+    transform: translateY(0px);
+}
+
+/* Modal animation */
+@keyframes modal-slide-in {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 } 
