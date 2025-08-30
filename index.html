@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-In or Fold Bot - GGPoker Format</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div id="hamburger-menu-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <nav id="side-menu">
+        <ul>
+            <li><a href="#" class="menu-link" data-page="poker-game-content">All-In or Fold (AoF)</a></li>
+            <li><a href="#" class="menu-link" data-page="spin-solver-content">Spin and Go Solver</a></li>
+        </ul>
+    </nav>
+
+    <div id="main-content-area">
+        <div id="poker-game-content" class="page-view active-page">
+            <div class="flex-container">
+                <div class="container">
+                    <h1>All-In or Fold Bot - GGPoker Format</h1>
+
+                    <div id="poker-table">
+                        <div id="community-cards-area">
+                            <!-- Community cards will be populated here by JS -->
+                        </div>
+
+                        <div id="player-areas">
+                            <!-- Player areas will be populated here by JS -->
+                        </div>
+                        
+                        <div id="pot-area">
+                            Pot: <span id="pot-size">0</span> BB
+                        </div>
+                    </div>
+
+                    <div id="player-hand-display" style="display: none;">
+                        Your Hand: <span id="user-card1">?</span> <span id="user-card2">?</span>
+                        (<span id="user-position">CO</span>)
+                    </div>
+                    
+                    <div id="controls">
+                        <button id="deal-button">Deal New Hand</button>
+                        <button id="all-in-button" disabled>ALL_IN</button>
+                        <button id="fold-button" disabled>FOLD</button>
+                        <button id="restart-button">Restart Game</button>
+                    </div>
+
+                    <div id="performance-graph-container">
+                        <canvas id="performanceChart"></canvas>
+                        <h2>Your Performance (BB)</h2>
+                    </div>
+
+                    <div id="log-area">
+                        <h2>Game Log</h2>
+                        <ul id="log-messages">
+                            <!-- Log messages will be populated here -->
+                        </ul>
+                    </div>
+                    
+                    <div id="winner-display">
+                        <!-- Winner info will be shown here -->
+                    </div>
+
+                    <p>Hands Played: <span id="hands-played">0</span></p>
+                </div>
+                
+                <div class="container-right">
+                    <h2>Additional Information</h2>
+                    <div class="info-section">
+                        <h3>What is All-In or Fold?</h3>
+                        <p>All-In or Fold (AoF) is a fast-paced poker format where players can only choose between going all-in or folding their hand. There's no option to call or make smaller bets, making gameplay quick and decisions straightforward but strategically challenging.</p>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>Learn More</h3>
+                        <div class="rules-section">
+                            <h4>Basic Rules:</h4>
+                            <ul>
+                                <li>Players can only go all-in or fold - no calling or raising allowed</li>
+                                <li>Blinds structure follows standard Texas Hold'em rules</li>
+                                <li>Action proceeds clockwise from the small blind</li>
+                                <li>Multiple all-ins create side pots automatically</li>
+                                <li>Standard poker hand rankings apply</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3>FAQ</h3>
+                        <div class="faq-item">
+                            <h4>Who am I playing against?</h4>
+                            <p>You're playing against 3 bots that use a near-optimal strategy. Good luck trying to beat them! 😉</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>Is there a reward for beating the bots?</h4>
+                            <p><strong>If you beat the bots after playing 200 hands with them, we have a special gift for you!</strong> Just send a screenshot to our Instagram page <a href="https://instagram.com/evo_solver" target="_blank">@evo_solver</a> to claim your reward.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>What provides the optimal experience on this website?</h4>
+                            <p>Chrome, Firefox, and Edge provide the best experience. Note that browser extensions may affect functionality - consider deactivating ad blockers for the best experience.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>Is this game mobile-friendly?</h4>
+                            <p>No, the interface is responsive and works on both desktop and tablet devices. However, it is not mobile-friendly.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4>How is my performance tracked?</h4>
+                            <p>Your results are displayed in the performance graph showing your cumulative big blinds won or lost.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="spin-solver-content" class="page-view">
+            <div class="container">
+                 <h1>Spin and Go Bot</h1>
+                 <p style="text-align: center; font-size: 1.2em; margin-top: 30px; color: #EAEAEA;">
+                    This page will be online very soon! 🚀
+                 </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Game state management and logic
+        class PokerGame {
+            constructor() {
+                this.RANKS = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+                this.SUITS = ['h', 'd', 'c', 's'];
+                this.RANK_VALUES = {
+                    "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 7, "8": 8, "9": 9,
+                    "10": 10, "J": 11, "Q": 12, "K": 13, "A": 14
+                };
+                
+                // Hand rankings
+                this.HIGH_CARD = 0;
+                this.PAIR = 1;
+                this.TWO_PAIR = 2;
+                this.THREE_KIND = 3;
+                this.STRAIGHT = 4;
+                this.FLUSH = 5;
+                this.FULL_HOUSE = 6;
+                this.FOUR_KIND = 7;
+                this.STRAIGHT_FLUSH = 8;
+                
+                this.strategyData = null;
+                this.loadStrategyData();
+                
+                this.gameState = this.getInitialGameState();
+            }
+            
+            async loadStrategyData() {
+                try {
+                    const response = await fetch('static/aggregated_results.json');
+                    this.strategyData = await response.json();
+                    console.log(`Loaded ${Object.keys(this.strategyData).length} strategy entries`);
+                } catch (error) {
+                    console.error('Failed to load strategy data:', error);
+                    this.strategyData = {};
+                }
+            }
+            
+            getInitialGameState() {
+                return {
+                    players: ["CO", "BTN", "SB", "BB"],
+                    playerStacks: [8.0, 8.0, 8.0, 8.0],
+                    currentPlayerIdx: 0,
+                    userPlayerPositionIdx: 0,
+                    userPlayerPositionIdxLastHand: 0,
+                    handsPlayed: 0,
+                    allPlayerCards: [],
+                    communityCards: [],
+                    decisions: ["", "", "", ""],
+                    potSize: 0.0,
+                    smallBlind: 0.4,
+                    bigBlind: 1.0,
+                    logMessages: ["Game started! Click 'Deal New Hand' to begin."],
+                    gamePhase: "pre_deal",
+                    playerCumulativeBB: [0],
+                    winnerInfo: null,
+                    winnersPlayerIndices: [],
+                    revealedCards: {},
+                    playerBetsThisHand: [0.0, 0.0, 0.0, 0.0]
+                };
+            }
+            
+            logMessage(message) {
+                this.gameState.logMessages.push(message);
+                if (this.gameState.logMessages.length > 10) {
+                    this.gameState.logMessages.shift();
+                }
+            }
+            
+            shuffleDeck() {
+                const deck = [];
+                for (const rank of this.RANKS) {
+                    for (const suit of this.SUITS) {
+                        deck.push(`${rank}${suit}`);
+                    }
+                }
+                
+                // Fisher-Yates shuffle
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+                
+                return deck;
+            }
+            
+            formatHandForStrategy(cards) {
+                if (!cards || cards.length !== 2) return "Unknown";
+                
+                const card1Rank = cards[0].slice(0, -1);
+                const card1Suit = cards[0].slice(-1);
+                const card2Rank = cards[1].slice(0, -1);
+                const card2Suit = cards[1].slice(-1);
+                
+                const suited = card1Suit === card2Suit ? 's' : 'o';
+                
+                const card1Value = this.RANK_VALUES[card1Rank] || 0;
+                const card2Value = this.RANK_VALUES[card2Rank] || 0;
+                
+                // Handle pocket pairs
+                if (card1Value === card2Value) {
+                    return `${card1Rank}${card2Rank}`;
+                }
+                
+                // Order by rank (higher rank first)
+                if (card1Value > card2Value) {
+                    return `${card1Rank}${card2Rank}${suited}`;
+                }
+                return `${card2Rank}${card1Rank}${suited}`;
+            }
+            
+            generateInfosetForLookup(priorActions) {
+                const numPrior = priorActions.length;
+                
+                if (numPrior === 0) {
+                    return "P2:[P0:P][P1:P]";
+                } else if (numPrior === 1) {
+                    const coActChar = priorActions[0] === 'ALL_IN' ? 'A' : 'F';
+                    return `P3:[P0:P][P1:P][P2:${coActChar}]`;
+                } else if (numPrior === 2) {
+                    const coActChar = priorActions[0] === 'ALL_IN' ? 'A' : 'F';
+                    const btnActChar = priorActions[1] === 'ALL_IN' ? 'A' : 'F';
+                    return `P0:[P1:P][P2:${coActChar}][P3:${btnActChar}]`;
+                } else if (numPrior === 3) {
+                    const coActChar = priorActions[0] === 'ALL_IN' ? 'A' : 'F';
+                    const btnActChar = priorActions[1] === 'ALL_IN' ? 'A' : 'F';
+                    const sbActChar = priorActions[2] === 'ALL_IN' ? 'A' : 'F';
+                    return `P1:[P0:${coActChar}][P2:${btnActChar}][P3:${sbActChar}]`;
+                }
+                
+                return "ERROR_UNKNOWN_INFOSET_CONDITION";
+            }
+            
+            simulateOptimalDecision(playerPositionName, playerHandStr) {
+                const playerMap = {"CO": 0, "BTN": 1, "SB": 2, "BB": 3};
+                const currentPlayerGameIdx = playerMap[playerPositionName];
+                
+                if (currentPlayerGameIdx === undefined) {
+                    return "FOLD";
+                }
+                
+                const priorRawDecisions = this.gameState.decisions.slice(0, currentPlayerGameIdx);
+                const priorActionsForInfoset = priorRawDecisions.map(dec => 
+                    ["ALL_IN", "FOLD"].includes(dec) ? dec : "FOLD"
+                );
+                
+                const infosetKey = this.generateInfosetForLookup(priorActionsForInfoset);
+                const lookupKey = `${infosetKey}|${playerHandStr}`;
+                
+                const defaultProbabilities = { fold_probability: 0.5, all_in_probability: 0.5 };
+                const retrievedProbabilities = this.strategyData[lookupKey] || defaultProbabilities;
+                
+                const randomValue = Math.random();
+                return randomValue < retrievedProbabilities.all_in_probability ? "ALL_IN" : "FOLD";
+            }
+            
+            findCardImageFilename(cardStr) {
+                if (!cardStr || cardStr.length < 2) return "back.png";
+                
+                const rankPart = cardStr.slice(0, -1);
+                const suitPart = cardStr.slice(-1);
+                
+                return `${rankPart}${suitPart.toLowerCase()}.png`;
+            }
+            
+            evaluateHand(holeCards, communityCards) {
+                const allCards = [...holeCards, ...communityCards];
+                if (allCards.length < 5) return null;
+                
+                // Generate all 5-card combinations
+                const combinations = this.getCombinations(allCards, 5);
+                let bestScore = null;
+                
+                for (const combo of combinations) {
+                    const score = this.evaluateFiveCardHand(combo);
+                    if (!bestScore || (score && this.compareHands(score, bestScore) > 0)) {
+                        bestScore = score;
+                    }
+                }
+                
+                return bestScore;
+            }
+            
+            getCombinations(arr, k) {
+                if (k === 1) return arr.map(x => [x]);
+                if (k === arr.length) return [arr];
+                
+                const combinations = [];
+                for (let i = 0; i <= arr.length - k; i++) {
+                    const head = arr[i];
+                    const tailCombos = this.getCombinations(arr.slice(i + 1), k - 1);
+                    for (const tailCombo of tailCombos) {
+                        combinations.push([head, ...tailCombo]);
+                    }
+                }
+                return combinations;
+            }
+            
+            evaluateFiveCardHand(hand) {
+                if (!hand || hand.length !== 5) return null;
+                
+                const cardValues = hand.map(card => {
+                    const rank = card.slice(0, -1);
+                    return this.RANK_VALUES[rank] || 0;
+                }).sort((a, b) => b - a);
+                
+                const freq = {};
+                cardValues.forEach(v => freq[v] = (freq[v] || 0) + 1);
+                const freqSorted = Object.entries(freq)
+                    .map(([v, count]) => [parseInt(v), count])
+                    .sort((a, b) => b[1] - a[1] || b[0] - a[0]);
+                
+                const isFlush = this.checkFlush(hand);
+                const straightHigh = this.checkStraight(cardValues);
+                
+                if (isFlush && straightHigh) {
+                    return [this.STRAIGHT_FLUSH, straightHigh];
+                }
+                if (freqSorted[0][1] === 4) {
+                    const kicker = cardValues.find(v => v !== freqSorted[0][0]) || 0;
+                    return [this.FOUR_KIND, freqSorted[0][0], kicker];
+                }
+                if (freqSorted[0][1] === 3 && freqSorted.length > 1 && freqSorted[1][1] >= 2) {
+                    return [this.FULL_HOUSE, freqSorted[0][0], freqSorted[1][0]];
+                }
+                if (isFlush) {
+                    return [this.FLUSH, ...cardValues.slice(0, 5)];
+                }
+                if (straightHigh) {
+                    return [this.STRAIGHT, straightHigh];
+                }
+                if (freqSorted[0][1] === 3) {
+                    const kickers = cardValues.filter(v => v !== freqSorted[0][0]).slice(0, 2);
+                    return [this.THREE_KIND, freqSorted[0][0], ...kickers];
+                }
+                if (freqSorted[0][1] === 2 && freqSorted.length > 1 && freqSorted[1][1] === 2) {
+                    const kicker = cardValues.find(v => v !== freqSorted[0][0] && v !== freqSorted[1][0]) || 0;
+                    return [this.TWO_PAIR, Math.max(freqSorted[0][0], freqSorted[1][0]), 
+                            Math.min(freqSorted[0][0], freqSorted[1][0]), kicker];
+                }
+                if (freqSorted[0][1] === 2) {
+                    const kickers = cardValues.filter(v => v !== freqSorted[0][0]).slice(0, 3);
+                    return [this.PAIR, freqSorted[0][0], ...kickers];
+                }
+                return [this.HIGH_CARD, ...cardValues.slice(0, 5)];
+            }
+            
+            checkFlush(hand) {
+                const suit = hand[0].slice(-1);
+                return hand.every(card => card.slice(-1) === suit);
+            }
+            
+            checkStraight(values) {
+                const uniqueValues = [...new Set(values)].sort((a, b) => b - a);
+                
+                // Check for standard straight
+                for (let i = 0; i <= uniqueValues.length - 5; i++) {
+                    let isStraight = true;
+                    for (let j = 0; j < 4; j++) {
+                        if (uniqueValues[i + j] - uniqueValues[i + j + 1] !== 1) {
+                            isStraight = false;
+                            break;
+                        }
+                    }
+                    if (isStraight) {
+                        return uniqueValues[i];
+                    }
+                }
+                
+                // Check for A-5 straight (wheel)
+                const wheelRanks = [14, 5, 4, 3, 2];
+                if (wheelRanks.every(rank => uniqueValues.includes(rank))) {
+                    return 5; // 5-high straight
+                }
+                
+                return null;
+            }
+            
+            compareHands(hand1, hand2) {
+                for (let i = 0; i < Math.max(hand1.length, hand2.length); i++) {
+                    const val1 = hand1[i] || 0;
+                    const val2 = hand2[i] || 0;
+                    if (val1 !== val2) return val1 - val2;
+                }
+                return 0;
+            }
+            
+            handTypeToString(handType) {
+                const types = {
+                    [this.HIGH_CARD]: "High Card",
+                    [this.PAIR]: "Pair",
+                    [this.TWO_PAIR]: "Two Pair",
+                    [this.THREE_KIND]: "Three of a Kind",
+                    [this.STRAIGHT]: "Straight",
+                    [this.FLUSH]: "Flush",
+                    [this.FULL_HOUSE]: "Full House",
+                    [this.FOUR_KIND]: "Four of a Kind",
+                    [this.STRAIGHT_FLUSH]: "Straight Flush"
+                };
+                return types[handType] || "Unknown Hand";
+            }
+            
+            dealCards() {
+                if (this.gameState.gamePhase === "awaiting_decision") {
+                    this.logMessage("Cannot deal, hand in progress.");
+                    return false;
+                }
+                
+                // Reset for new hand
+                this.gameState.playerStacks = [8.0, 8.0, 8.0, 8.0];
+                this.gameState.potSize = 0.0;
+                this.gameState.playerBetsThisHand = [0.0, 0.0, 0.0, 0.0];
+                this.gameState.handsPlayed++;
+                this.gameState.currentPlayerIdx = this.gameState.userPlayerPositionIdx;
+                this.gameState.decisions = ["", "", "", ""];
+                this.gameState.winnerInfo = null;
+                this.gameState.winnersPlayerIndices = [];
+                this.gameState.revealedCards = {};
+                this.gameState.userPlayerPositionIdxLastHand = this.gameState.userPlayerPositionIdx;
+                
+                const deck = this.shuffleDeck();
+                
+                // Deal cards to players
+                this.gameState.allPlayerCards = [];
+                for (let i = 0; i < this.gameState.players.length; i++) {
+                    const card1 = deck.pop();
+                    const card2 = deck.pop();
+                    this.gameState.allPlayerCards.push([card1, card2]);
+                }
+                
+                this.gameState.communityCards = deck.slice(0, 5);
+                
+                // Post blinds
+                const sbIdx = this.gameState.players.indexOf("SB");
+                const bbIdx = this.gameState.players.indexOf("BB");
+                
+                this.gameState.playerStacks[sbIdx] = Math.round((this.gameState.playerStacks[sbIdx] - this.gameState.smallBlind) * 100) / 100;
+                this.gameState.playerBetsThisHand[sbIdx] = this.gameState.smallBlind;
+                this.gameState.potSize = Math.round((this.gameState.potSize + this.gameState.smallBlind) * 100) / 100;
+                
+                this.gameState.playerStacks[bbIdx] = Math.round((this.gameState.playerStacks[bbIdx] - this.gameState.bigBlind) * 100) / 100;
+                this.gameState.playerBetsThisHand[bbIdx] = this.gameState.bigBlind;
+                this.gameState.potSize = Math.round((this.gameState.potSize + this.gameState.bigBlind) * 100) / 100;
+                
+                this.logMessage(`Hand #${this.gameState.handsPlayed}. You are ${this.gameState.players[this.gameState.userPlayerPositionIdx]}.`);
+                const userCards = this.gameState.allPlayerCards[this.gameState.userPlayerPositionIdx];
+                this.logMessage(`Your hand: ${userCards[0]} ${userCards[1]}`);
+                
+                // Simulate decisions for players before the user
+                for (let i = 0; i < this.gameState.userPlayerPositionIdx; i++) {
+                    const playerPosName = this.gameState.players[i];
+                    const playerCards = this.gameState.allPlayerCards[i];
+                    const playerHandStr = this.formatHandForStrategy(playerCards);
+                    const decision = this.simulateOptimalDecision(playerPosName, playerHandStr);
+                    this.gameState.decisions[i] = decision;
+                    this.logMessage(`${playerPosName} (${playerHandStr}) decided: ${decision}`);
+                    
+                    if (decision === "ALL_IN") {
+                        const amountToAdd = this.gameState.playerStacks[i];
+                        this.gameState.potSize = Math.round((this.gameState.potSize + amountToAdd) * 100) / 100;
+                        this.gameState.playerBetsThisHand[i] += amountToAdd;
+                        this.gameState.playerStacks[i] = 0;
+                    }
+                }
+                
+                // Check if user is BB and all others folded
+                const coIdx = this.gameState.players.indexOf("CO");
+                const btnIdx = this.gameState.players.indexOf("BTN");
+                
+                if (this.gameState.userPlayerPositionIdx === bbIdx &&
+                    this.gameState.decisions[coIdx] === "FOLD" &&
+                    this.gameState.decisions[btnIdx] === "FOLD" &&
+                    this.gameState.decisions[sbIdx] === "FOLD") {
+                    
+                    this.gameState.decisions[bbIdx] = "ALL_IN";
+                    this.logMessage("You (BB) automatically win as all others folded. Your decision set to ALL_IN.");
+                    
+                    const amountToAdd = this.gameState.playerStacks[bbIdx];
+                    this.gameState.playerBetsThisHand[bbIdx] += amountToAdd;
+                    this.gameState.potSize = Math.round((this.gameState.potSize + amountToAdd) * 100) / 100;
+                    this.gameState.playerStacks[bbIdx] = 0;
+                    
+                    this.determineWinner();
+                    this.gameState.gamePhase = "showdown";
+                    this.gameState.userPlayerPositionIdx = (this.gameState.userPlayerPositionIdx + 1) % this.gameState.players.length;
+                    return true;
+                }
+                
+                this.gameState.gamePhase = "awaiting_decision";
+                return true;
+            }
+            
+            makeDecision(decisionType) {
+                if (this.gameState.gamePhase !== "awaiting_decision") {
+                    return false;
+                }
+                
+                const userIdx = this.gameState.userPlayerPositionIdx;
+                this.gameState.decisions[userIdx] = decisionType;
+                this.logMessage(`You (${this.gameState.players[userIdx]}) decided: ${decisionType}`);
+                
+                if (decisionType === "ALL_IN") {
+                    const amountToAdd = this.gameState.playerStacks[userIdx];
+                    this.gameState.playerBetsThisHand[userIdx] += amountToAdd;
+                    this.gameState.potSize = Math.round((this.gameState.potSize + amountToAdd) * 100) / 100;
+                    this.gameState.playerStacks[userIdx] = 0;
+                    this.logMessage(`You go ALL IN. Your bet this hand: ${this.gameState.playerBetsThisHand[userIdx].toFixed(2)} BB. Pot: ${this.gameState.potSize.toFixed(2)} BB`);
+                }
+                
+                // Simulate remaining players' decisions
+                for (let i = 0; i < this.gameState.players.length; i++) {
+                    if (i === userIdx || this.gameState.decisions[i]) continue;
+                    
+                    const playerPosName = this.gameState.players[i];
+                    const playerCards = this.gameState.allPlayerCards[i];
+                    const playerHandStr = this.formatHandForStrategy(playerCards);
+                    const decision = this.simulateOptimalDecision(playerPosName, playerHandStr);
+                    
+                    this.gameState.decisions[i] = decision;
+                    this.logMessage(`${playerPosName} (${playerHandStr}) decided: ${decision}`);
+                    
+                    if (decision === "ALL_IN") {
+                        const amountToAdd = this.gameState.playerStacks[i];
+                        if (amountToAdd > 0) {
+                            this.gameState.playerBetsThisHand[i] += amountToAdd;
+                            this.gameState.potSize = Math.round((this.gameState.potSize + amountToAdd) * 100) / 100;
+                            this.gameState.playerStacks[i] = 0;
+                            this.logMessage(`${playerPosName} goes ALL IN. Their bet: ${this.gameState.playerBetsThisHand[i].toFixed(2)} BB. Pot: ${this.gameState.potSize.toFixed(2)} BB`);
+                        }
+                    }
+                }
+                
+                this.determineWinner();
+                this.gameState.gamePhase = "showdown";
+                this.gameState.userPlayerPositionIdx = (this.gameState.userPlayerPositionIdx + 1) % this.gameState.players.length;
+                
+                return true;
+            }
+            
+            determineWinner() {
+                const userIdx = this.gameState.userPlayerPositionIdxLastHand;
+                const userContribution = this.gameState.playerBetsThisHand[userIdx];
+                const currentCumulative = this.gameState.playerCumulativeBB[this.gameState.playerCumulativeBB.length - 1] || 0;
+                
+                // Ensure all decisions are set
+                for (let i = 0; i < this.gameState.decisions.length; i++) {
+                    if (!this.gameState.decisions[i]) {
+                        this.gameState.decisions[i] = "FOLD";
+                    }
+                }
+                
+                const nonFoldedPlayers = this.gameState.decisions
+                    .map((decision, idx) => decision !== "FOLD" ? idx : null)
+                    .filter(idx => idx !== null);
+                
+                if (nonFoldedPlayers.length === 0) {
+                    this.logMessage("Error: All players folded?");
+                    this.gameState.playerCumulativeBB.push(currentCumulative - userContribution);
+                    this.gameState.winnerInfo = { name: "No Winner", handType: "All Folded" };
+                    return;
+                }
+                
+                if (nonFoldedPlayers.length === 1) {
+                    const winnerIdx = nonFoldedPlayers[0];
+                    this.logMessage(`${this.gameState.players[winnerIdx]} wins the pot of ${this.gameState.potSize.toFixed(2)} BB (others folded).`);
+                    this.gameState.winnerInfo = { name: this.gameState.players[winnerIdx], handType: "Opponents Folded" };
+                    this.gameState.winnersPlayerIndices = [winnerIdx];
+                    
+                    if (this.gameState.allPlayerCards[winnerIdx]) {
+                        this.gameState.revealedCards[winnerIdx] = this.gameState.allPlayerCards[winnerIdx];
+                    }
+                    
+                    this.gameState.playerStacks[winnerIdx] = Math.round((this.gameState.playerStacks[winnerIdx] + this.gameState.potSize) * 100) / 100;
+                    
+                    const userBBChange = winnerIdx === userIdx ? 
+                        this.gameState.potSize - userContribution : -userContribution;
+                    
+                    this.gameState.playerCumulativeBB.push(currentCumulative + userBBChange);
+                    this.logMessage(`Your BB change for hand: ${userBBChange.toFixed(2)}. Total: ${this.gameState.playerCumulativeBB[this.gameState.playerCumulativeBB.length - 1].toFixed(2)}`);
+                    return;
+                }
+                
+                // Showdown evaluation
+                let bestScore = null;
+                const winners = [];
+                const playerScores = {};
+                
+                for (const pIdx of nonFoldedPlayers) {
+                    const holeCards = this.gameState.allPlayerCards[pIdx];
+                    const score = this.evaluateHand(holeCards, this.gameState.communityCards);
+                    playerScores[pIdx] = score;
+                    this.gameState.revealedCards[pIdx] = holeCards;
+                    
+                    if (score) {
+                        this.logMessage(`${this.gameState.players[pIdx]} has ${this.handTypeToString(score[0])} (${holeCards.join(' ')})`);
+                        if (!bestScore || this.compareHands(score, bestScore) > 0) {
+                            bestScore = score;
+                            winners.length = 0;
+                            winners.push(pIdx);
+                        } else if (this.compareHands(score, bestScore) === 0) {
+                            winners.push(pIdx);
+                        }
+                    }
+                }
+                
+                this.gameState.winnersPlayerIndices = winners;
+                
+                if (winners.length === 0 || !bestScore) {
+                    this.logMessage("Error: Could not determine winner.");
+                    this.gameState.playerCumulativeBB.push(currentCumulative - userContribution);
+                    this.gameState.winnerInfo = { name: "Evaluation Error", handType: "Unknown" };
+                    return;
+                }
+                
+                const potPerWinner = Math.round((this.gameState.potSize / winners.length) * 100) / 100;
+                const winnerNames = winners.map(idx => this.gameState.players[idx]);
+                const handName = this.handTypeToString(bestScore[0]);
+                
+                this.logMessage(`Winner(s): ${winnerNames.join(', ')} with ${handName}. Each gets ${potPerWinner.toFixed(2)} BB.`);
+                this.gameState.winnerInfo = { name: winnerNames.join(', '), handType: handName };
+                
+                for (const wIdx of winners) {
+                    this.gameState.playerStacks[wIdx] = Math.round((this.gameState.playerStacks[wIdx] + potPerWinner) * 100) / 100;
+                }
+                
+                const userBBChange = winners.includes(userIdx) ? 
+                    potPerWinner - userContribution : -userContribution;
+                
+                this.gameState.playerCumulativeBB.push(currentCumulative + userBBChange);
+                this.logMessage(`Your BB change for hand: ${userBBChange.toFixed(2)}. Total: ${this.gameState.playerCumulativeBB[this.gameState.playerCumulativeBB.length - 1].toFixed(2)}`);
+            }
+            
+            restartGame() {
+                this.gameState = this.getInitialGameState();
+                this.logMessage("Game restarted!");
+                return true;
+            }
+            
+            getDisplayState() {
+                const displayState = { ...this.gameState };
+                
+                // Process card displays
+                displayState.allPlayerCardsDisplay = [];
+                const userIdxForCardReveal = displayState.gamePhase === "showdown" ? 
+                    displayState.userPlayerPositionIdxLastHand : displayState.userPlayerPositionIdx;
+                
+                for (let i = 0; i < displayState.players.length; i++) {
+                    const playerCards = displayState.allPlayerCards[i];
+                    if (!playerCards || playerCards.length !== 2) {
+                        displayState.allPlayerCardsDisplay.push(["back.png", "back.png"]);
+                        continue;
+                    }
+                    
+                    let canSeeCards = false;
+                    
+                    // User's own cards
+                    if (i === userIdxForCardReveal && displayState.gamePhase !== "pre_deal") {
+                        canSeeCards = true;
+                    }
+                    
+                    // Showdown visibility
+                    if (displayState.gamePhase === "showdown") {
+                        if (displayState.decisions[i] === "ALL_IN" || displayState.decisions[i] === "FOLD" || 
+                            displayState.revealedCards[i]) {
+                            canSeeCards = true;
+                        }
+                    }
+                    
+                    if (canSeeCards) {
+                        displayState.allPlayerCardsDisplay.push([
+                            this.findCardImageFilename(playerCards[0]),
+                            this.findCardImageFilename(playerCards[1])
+                        ]);
+                    } else {
+                        displayState.allPlayerCardsDisplay.push(["back.png", "back.png"]);
+                    }
+                }
+                
+                // Community cards display
+                displayState.communityCardsDisplay = [];
+                if (displayState.gamePhase === "showdown") {
+                    displayState.communityCardsDisplay = displayState.communityCards.slice(0, 5)
+                        .map(card => this.findCardImageFilename(card));
+                }
+                
+                // User hand display
+                displayState.userHandDisplay = ["?", "?"];
+                if (displayState.allPlayerCards[displayState.userPlayerPositionIdx] && 
+                    displayState.gamePhase !== "pre_deal") {
+                    const userCards = displayState.allPlayerCards[displayState.userPlayerPositionIdx];
+                    displayState.userHandDisplay = [userCards[0], userCards[1]];
+                }
+                
+                // Winner indices for highlighting
+                displayState.winnerIndices = displayState.gamePhase === "showdown" ? 
+                    displayState.winnersPlayerIndices : [];
+                
+                return displayState;
+            }
+        }
+        
+        // UI Management
+        let game = new PokerGame();
+        let performanceChart = null;
+        
+        const CARD_IMAGE_PATH = 'static/card_images/';
+        
+        const dealButton = document.getElementById('deal-button');
+        const allInButton = document.getElementById('all-in-button');
+        const foldButton = document.getElementById('fold-button');
+        const restartButton = document.getElementById('restart-button');
+        const communityCardsArea = document.getElementById('community-cards-area');
+        const playerAreasContainer = document.getElementById('player-areas');
+        const potSizeSpan = document.getElementById('pot-size');
+        const logMessagesUl = document.getElementById('log-messages');
+        const handsPlayedSpan = document.getElementById('hands-played');
+        const winnerDisplay = document.getElementById('winner-display');
+        const userCard1Span = document.getElementById('user-card1');
+        const userCard2Span = document.getElementById('user-card2');
+        const userPositionSpan = document.getElementById('user-position');
+        const chartCanvas = document.getElementById('performanceChart');
+        
+        // Menu functionality
+        const hamburgerIcon = document.getElementById('hamburger-menu-icon');
+        const sideMenu = document.getElementById('side-menu');
+        const menuLinks = document.querySelectorAll('#side-menu .menu-link');
+        const pageViews = document.querySelectorAll('.page-view');
+        
+        if (hamburgerIcon && sideMenu) {
+            hamburgerIcon.addEventListener('click', () => {
+                hamburgerIcon.classList.toggle('open');
+                sideMenu.classList.toggle('open');
+            });
+        }
+        
+        menuLinks.forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const targetPageId = link.getAttribute('data-page');
+                
+                pageViews.forEach(page => {
+                    if (page.id === targetPageId) {
+                        page.classList.add('active-page');
+                    } else {
+                        page.classList.remove('active-page');
+                    }
+                });
+                
+                if (hamburgerIcon && sideMenu) {
+                    hamburgerIcon.classList.remove('open');
+                    sideMenu.classList.remove('open');
+                }
+            });
+        });
+        
+        function updateUI(state) {
+            // Log messages
+            logMessagesUl.innerHTML = '';
+            state.logMessages.forEach(msg => {
+                const li = document.createElement('li');
+                li.textContent = msg;
+                logMessagesUl.appendChild(li);
+            });
+            logMessagesUl.scrollTop = logMessagesUl.scrollHeight;
+            
+            // Hands played
+            handsPlayedSpan.textContent = state.handsPlayed;
+            
+            // Pot size
+            potSizeSpan.textContent = state.potSize.toFixed(2);
+            
+            // Clear previous highlights
+            document.querySelectorAll('.player-area.winner-player').forEach(el => el.classList.remove('winner-player'));
+            document.querySelectorAll('.player-area.current-player').forEach(el => el.classList.remove('current-player'));
+            
+            // Player areas
+            playerAreasContainer.innerHTML = '';
+            state.players.forEach((playerName, index) => {
+                const playerArea = document.createElement('div');
+                playerArea.classList.add('player-area');
+                playerArea.id = `player-${playerName}`;
+                
+                const positionToHighlight = state.gamePhase === "showdown" && state.userPlayerPositionIdxLastHand !== undefined
+                    ? state.userPlayerPositionIdxLastHand
+                    : state.userPlayerPositionIdx;
+                
+                if (index === positionToHighlight) {
+                    playerArea.classList.add('current-player');
+                }
+                
+                if (state.gamePhase === "showdown" && state.winnerIndices && state.winnerIndices.includes(index)) {
+                    playerArea.classList.add('winner-player');
+                }
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.classList.add('player-name');
+                nameDiv.textContent = `${playerName} (${state.playerStacks[index].toFixed(2)} BB)`;
+                playerArea.appendChild(nameDiv);
+                
+                const cardsDiv = document.createElement('div');
+                cardsDiv.classList.add('player-cards');
+                
+                const playerCardsToDisplay = (state.allPlayerCardsDisplay && state.allPlayerCardsDisplay[index]) 
+                    ? state.allPlayerCardsDisplay[index] 
+                    : ['back.png', 'back.png'];
+                
+                playerCardsToDisplay.forEach(cardFile => {
+                    const cardImg = document.createElement('img');
+                    cardImg.src = CARD_IMAGE_PATH + cardFile;
+                    cardImg.alt = cardFile.split('.')[0];
+                    cardsDiv.appendChild(cardImg);
+                });
+                playerArea.appendChild(cardsDiv);
+                
+                if (state.decisions && state.decisions[index]) {
+                    const decisionDiv = document.createElement('div');
+                    decisionDiv.classList.add('player-decision');
+                    decisionDiv.textContent = state.decisions[index];
+                    if (state.decisions[index] === "FOLD") decisionDiv.classList.add("fold");
+                    if (state.decisions[index] === "ALL_IN") decisionDiv.classList.add("all-in");
+                    playerArea.appendChild(decisionDiv);
+                }
+                
+                playerAreasContainer.appendChild(playerArea);
+            });
+            
+            // User hand display
+            if (state.userHandDisplay && state.userHandDisplay.length === 2 && state.userHandDisplay[0] !== '?') {
+                userCard1Span.textContent = state.userHandDisplay[0];
+                userCard2Span.textContent = state.userHandDisplay[1];
+            } else {
+                userCard1Span.textContent = '?';
+                userCard2Span.textContent = '?';
+            }
+            userPositionSpan.textContent = state.players[state.userPlayerPositionIdx];
+            
+            // Community cards
+            communityCardsArea.innerHTML = '';
+            (state.communityCardsDisplay || []).forEach(cardFile => {
+                if (cardFile) {
+                    const cardImg = document.createElement('img');
+                    cardImg.src = CARD_IMAGE_PATH + cardFile;
+                    cardImg.alt = cardFile.split('.')[0];
+                    communityCardsArea.appendChild(cardImg);
+                }
+            });
+            
+            const revealedCount = (state.communityCardsDisplay || []).length;
+            if (state.gamePhase !== "showdown" || revealedCount < 5) {
+                for (let i = revealedCount; i < 5; i++) {
+                    const cardImg = document.createElement('img');
+                    cardImg.src = CARD_IMAGE_PATH + 'back.png';
+                    cardImg.alt = 'Card Back';
+                    communityCardsArea.appendChild(cardImg);
+                }
+            }
+            
+            // Winner display
+            if (state.gamePhase === "showdown" && state.winnerInfo) {
+                winnerDisplay.textContent = `Winner: ${state.winnerInfo.name} with ${state.winnerInfo.handType}`;
+            } else {
+                winnerDisplay.textContent = '';
+            }
+            
+            // Button states
+            if (state.gamePhase === "awaiting_decision") {
+                dealButton.disabled = true;
+                allInButton.disabled = false;
+                foldButton.disabled = false;
+            } else {
+                dealButton.disabled = false;
+                allInButton.disabled = true;
+                foldButton.disabled = true;
+            }
+            
+            // Performance graph
+            if (state.playerCumulativeBB && typeof Chart !== 'undefined') {
+                const labels = Array.from({ length: state.playerCumulativeBB.length }, (_, i) => i);
+                const data = {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative BB Won/Lost',
+                        backgroundColor: 'rgb(75, 192, 192)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        data: state.playerCumulativeBB,
+                        fill: false,
+                        tension: 0.1
+                    }]
+                };
+                
+                if (performanceChart) {
+                    performanceChart.data = data;
+                    performanceChart.update('none');
+                } else {
+                    performanceChart = new Chart(chartCanvas, {
+                        type: 'line',
+                        data: data,
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: false
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Event listeners
+        dealButton.addEventListener('click', () => {
+            game.dealCards();
+            updateUI(game.getDisplayState());
+        });
+        
+        allInButton.addEventListener('click', () => {
+            game.makeDecision('ALL_IN');
+            updateUI(game.getDisplayState());
+        });
+        
+        foldButton.addEventListener('click', () => {
+            game.makeDecision('FOLD');
+            updateUI(game.getDisplayState());
+        });
+        
+        restartButton.addEventListener('click', () => {
+            game.restartGame();
+            updateUI(game.getDisplayState());
+        });
+        
+        // Initialize the game
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait for strategy data to load
+            const initGame = () => {
+                if (game.strategyData === null) {
+                    setTimeout(initGame, 100);
+                    return;
+                }
+                updateUI(game.getDisplayState());
+            };
+            initGame();
+        });
+    </script>
+</body>
+</html>
